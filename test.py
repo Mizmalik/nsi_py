@@ -1,113 +1,108 @@
-import time
-import random
-
 class JeuClonium:
-    def __init__(self):
-        self.grille = []
-        self.joueur = 0
-        self.longueur = 0
-        self.nbjoueurs = 0
-        self.tour = 1
-        self.compteur = 1
+    def __init__(self, nb_joueurs, taille_plateau):
+        self.nb_joueurs = nb_joueurs
+        self.taille_plateau = taille_plateau
+        self.plateau = [[None for _ in range(taille_plateau)] for _ in range(taille_plateau)]
+        self.joueurs = [chr(65 + i) for i in range(nb_joueurs)]
+        self.joueur_actuel = 0
+        self.initialiser_plateau()
 
-    def init_jeu(self):
-        print("Bienvenue dans le jeu Clonium !")
-        time.sleep(1)
+    def initialiser_plateau(self):
+        coins = [(1, 1), (1, self.taille_plateau - 2), (self.taille_plateau - 2, 1), (self.taille_plateau - 2, self.taille_plateau - 2)]
+        for i, joueur in enumerate(self.joueurs):
+            x, y = coins[i % 4]
+            self.plateau[x][y] = (joueur, 3)
 
-        self.longueur = self.saisie_longueur()
-        self.joueur = self.saisie_joueurs()
-        self.nbjoueurs = self.joueur
+    def afficher_plateau(self):
+        for ligne in self.plateau:
+            row_str = ""
+            for cellule in ligne:
+                if cellule:
+                    joueur, points = cellule
+                    row_str += f"{joueur}|{points} "
+                else:
+                    row_str += "... "
+            print(row_str[:-1])
+        print()
 
-        self.grille = self.initialiser_grille()
-        print("La partie commence !")
+    def ajouter_point(self, x, y):
+            joueur, points = self.plateau[x][y]
+            if joueur != self.joueurs[self.joueur_actuel]:
+                print("Vous ne pouvez pas ajouter un point au pion de l'adversaire !")
+                return False
+            self.plateau[x][y] = (joueur, points + 1)
+            if points + 1 == 4:
+                self.exploser(x, y)
+            return True
 
-    def saisie_longueur(self):
-        longueur = int(input("Entrez la longueur de la grille (entre 5 et 10 cases): "))
-        while longueur > 10 or longueur < 5:
-            longueur = int(input("Entrez une longueur VALIDE (entre 5 et 10 cases): "))
-        return longueur
+    def exploser(self, x, y):
+        joueur, _ = self.plateau[x][y]
+        self.plateau[x][y] = None
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < self.taille_plateau and 0 <= ny < self.taille_plateau:
+                if self.plateau[nx][ny]:
+                    proprietaire, points = self.plateau[nx][ny]
+                    self.plateau[nx][ny] = (joueur, points + 1)
+                    if points + 1 == 4:
+                        self.exploser(nx, ny)
+                else:
+                    self.plateau[nx][ny] = (joueur, 1)
 
-    def saisie_joueurs(self):
-        joueur = int(input("Entrez le nombre de joueur(s) humains (entre 1 et 4): "))
-        while joueur < 1 or joueur > 4:
-            print("Le nombre de joueurs humains doit être entre 1 et 4.")
-            joueur = int(input("Entrez un nombre de joueur(s) humain(s) VALIDE (entre 1 et 4): "))
-        return joueur
+    def changer_joueur(self):
+        self.joueur_actuel = (self.joueur_actuel + 1) % self.nb_joueurs
 
-    def initialiser_grille(self):
-        grille = [[0] * self.longueur for _ in range(self.longueur)]
-        # Initialisation des joueurs
-        for i in range(self.joueur):
-            x, y = self.placer_joueur(grille)
-            grille[x][y] = i + 1
-
-        return grille
-
-    def placer_joueur(self, grille):
-        x = random.randint(0, self.longueur - 1)
-        y = random.randint(0, self.longueur - 1)
-        while grille[x][y] != 0:
-            x = random.randint(0, self.longueur - 1)
-            y = random.randint(0, self.longueur - 1)
-        return x, y
+    def verifier_vainqueur(self):
+        pions_joueurs = {joueur: 0 for joueur in self.joueurs}
+        for ligne in self.plateau:
+            for cellule in ligne:
+                if cellule:
+                    pions_joueurs[cellule[0]] += 1
+        for joueur, nb_pions in pions_joueurs.items():
+            if nb_pions == 0:
+                return joueur
+        return None
 
     def jouer_tour(self):
-        print(f"Tour du joueur {self.tour}")
-        self.afficher_grille()
-        self.choisir_case()
-        self.explosion()
-        self.tour_suivant()
-
-    def choisir_case(self):
-        print("Choisissez la case où jouer :")
+        self.afficher_plateau()
         while True:
-            x = int(input(f"Entrez la ligne (entre 0 et {self.longueur - 1}): "))
-            y = int(input(f"Entrez la colonne (entre 0 et {self.longueur - 1}): "))
-            if x >= 0 and x < self.longueur and y >= 0 and y < self.longueur and self.grille[x][y] == 0:
-                self.grille[x][y] = self.tour
-                self.compteur += 1
-                break
-            else:
-                print("Case invalide ou occupée. Réessayez.")
-
-    def explosion(self):
-        for x in range(self.longueur):
-            for y in range(self.longueur):
-                if self.grille[x][y] == self.tour and self.grille[x][y] > 3:
-                    self.grille[x][y] = 0
-                    self.propager_explosion(x, y)
-
-    def propager_explosion(self, x, y):
-        directions = [(0, 1), (0, -1), (1, 0), (-1, 0)]  # Droite, Gauche, Bas, Haut
-        for dx, dy in directions:
-            new_x, new_y = x + dx, y + dy
-            if 0 <= new_x < self.longueur and 0 <= new_y < self.longueur and self.grille[new_x][new_y] == self.tour:
-                self.grille[new_x][new_y] = 0
-
-    def tour_suivant(self):
-        self.tour += 1
-        if self.tour > self.nbjoueurs:
-            self.tour = 1
-
-    def victoire(self):
-        if self.compteur == self.longueur * self.longueur:
-            return True
+            try:
+                x = int(input(f"{self.joueurs[self.joueur_actuel]}, entrez la colonne pour ajouter un point (0-{self.taille_plateau-1}): "))
+                y = int(input(f"{self.joueurs[self.joueur_actuel]}, entrez la ligne pour ajouter un point (0-{self.taille_plateau-1}): "))
+                if 0 <= x < self.taille_plateau and 0 <= y < self.taille_plateau and self.plateau[x][y]:
+                    break
+                else:
+                    print("Coordonnées invalides ou case vide, veuillez réessayer.")
+            except ValueError:
+                print("Entrée invalide, veuillez entrer des nombres entiers.")
+        
+        if self.ajouter_point(x, y):
+            vainqueur = self.verifier_vainqueur()
+            if vainqueur:
+                print(f"{vainqueur} a gagné !")
+                return True
+            self.changer_joueur()
         return False
 
-    def afficher_grille(self):
-        for row in self.grille:
-            print(" ".join(str(cell) if cell != 0 else "0" for cell in row))
-
-
-def main():
-    jeu = JeuClonium()
-    jeu.init_jeu()
-
-    while not jeu.victoire():
-        jeu.jouer_tour()
-
-    print("Partie terminée !")
-
+    def jouer_jeu(self):
+        while True:
+            if self.jouer_tour():
+                break
 
 if __name__ == "__main__":
-    main()
+    while True:
+        try:
+            nb_joueurs = int(input("Entrez le nombre de joueurs (entre 2 et 4) : "))
+            if nb_joueurs < 2 or nb_joueurs > 4:
+                print("Le nombre de joueurs doit être entre 2 et 4.")
+                continue
+            taille_plateau = int(input("Entrez la taille du plateau (entre 5 et 10) : "))
+            if taille_plateau < 5 or taille_plateau > 10:
+                print("La taille du plateau doit être entre 5 et 10.")
+                continue
+            break
+        except ValueError:
+            print("Entrée invalide, veuillez entrer un nombre entier.")
+
+    jeu = JeuClonium(nb_joueurs, taille_plateau)
+    jeu.jouer_jeu()

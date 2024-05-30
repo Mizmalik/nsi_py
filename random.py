@@ -14,16 +14,13 @@ def tour_joueur(allumettes):
 
 def tour_bot(allumettes, niveau):
     if niveau == "facile":
-        # Bot facile prend toujours 1 allumette si possible, sinon 1 allumette
         return 1
     elif niveau == "moyen":
-        # Bot moyen joue semi-optimalement, essaye de laisser un multiple de 4 à l'adversaire mais parfois fait des erreurs
         if allumettes % 4 != 0:
             return allumettes % 4
         else:
             return 2 if allumettes >= 3 else 1
-    else:  # niveau difficile
-        # Bot difficile joue optimalement pour toujours essayer de gagner
+    else:
         if allumettes % 4 == 0:
             return 3
         elif allumettes % 4 == 3:
@@ -69,5 +66,4 @@ def jeu_des_allumettes():
 
         joueur_actuel = 2 if joueur_actuel == 1 else 1
 
-# Lancer le jeu
 jeu_des_allumettes()
